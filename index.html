@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>칭찬 톡톡 — 칭찬보드</title>
+  <style>
+    :root{
+      --bg:#f6fbff;--card:#ffffff;--ink:#0f172a;--muted:#64748b;--pri:#3b82f6;--pri-weak:#dbeafe;--rose:#f43f5e;--led:#00ffd1;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Roboto,Pretendard,Apple SD Gothic Neo,Noto Sans KR,sans-serif;color:var(--ink);}    
+    body{background:linear-gradient(180deg,#eaf6ff 0%, #fff 55%, #fff 100%);} 
+    .container{max-width:960px;margin:0 auto;padding:20px 16px 64px;}
+    .title{display:flex;align-items:center;gap:12px}
+    .title h1{margin:0;font-size:1.8rem}
+    .sub{color:var(--muted);margin-top:4px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 6px 20px rgba(30,64,175,.08);}    
+    .card h2{margin:0 0 10px;font-size:1.2rem}
+    .card .content{padding:16px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .row > *{flex:1}
+    label{font-size:.9rem;color:var(--muted)}
+    input[type="text"], textarea, select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #d1d5db;background:#fff;font-size:1rem}
+    textarea{resize:vertical;min-height:88px}
+    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(59,130,246,.25)}
+    .btn.ghost{background:#fff;color:#1e40af;border:1px solid #bfdbfe}
+    .btn.small{padding:6px 10px;border-radius:10px;font-weight:600}
+    .muted{color:var(--muted);font-size:.9rem}
+    .list{display:grid;gap:10px;margin-top:12px}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-weight:600;font-size:.85rem}
+    .note{border:1px dashed #cbd5e1;padding:10px;border-radius:12px;background:#f8fafc;color:#0f172a}
+
+    /* 칭찬 카드 */
+    .compliment{background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;padding:12px 12px}
+    .compliment .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .to{font-weight:800}
+    .msg{margin:6px 0 10px;white-space:pre-wrap}
+    .actions{display:flex;gap:8px}
+    .like{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid #fecaca;background:#fff5f5;color:#b91c1c;padding:6px 10px;cursor:pointer}
+    .stamp{font-size:.8rem;color:#64748b}
+
+    /* ===== 전광판(LED) 오버레이 ===== */
+    .overlay{position:fixed;inset:0;background:radial-gradient(1000px 600px at 50% -10%, rgba(1,8,20,.95), rgba(0,0,0,.98));display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+    .overlay.show{display:flex}
+    .marquee{width:min(1100px,96vw);height:min(82vh,760px);background:#030712;border-radius:24px;border:2px solid rgba(0,255,209,.2);box-shadow:0 20px 80px rgba(0,255,209,.08), inset 0 0 40px rgba(0,255,209,.06);display:flex;flex-direction:column;overflow:hidden}
+    .marqueeHeader{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #0f172a;background:#020617;color:#e2e8f0}
+    .marqueeHeader h3{margin:0;font-size:1.1rem}
+    .marqueeBody{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;background:#020617}
+
+    .marqueeCard{position:relative;width:100%;max-width:900px;border:2px solid rgba(0,255,209,.2);border-radius:20px;background:#000;box-shadow:inset 0 0 40px rgba(0,255,209,.05),0 0 80px rgba(0,0,0,.6);padding:28px}
+    .marqueeCard::before{content:"";position:absolute;inset:0;border-radius:18px;background-image:radial-gradient(circle at center, rgba(255,255,255,.07) 11%, transparent 12%),radial-gradient(circle at center, rgba(255,255,255,.07) 11%, transparent 12%);background-size:12px 12px,12px 12px;background-position:0 0,6px 6px;opacity:.55;pointer-events:none}
+    .marqueeCard::after{content:"";position:absolute;inset:0;border-radius:18px;background:linear-gradient(120deg, transparent 20%, rgba(255,255,255,.05) 40%, transparent 60%);filter:blur(0.5px);animation:scan 6s linear infinite;mix-blend-mode:screen;pointer-events:none}
+    @keyframes scan{from{transform:translateX(-120%)}to{transform:translateX(120%)}}
+
+    .led{color:var(--led);text-shadow:0 0 6px var(--led),0 0 12px var(--led),0 0 22px var(--led),0 0 38px color-mix(in oklab, var(--led) 70%, black);letter-spacing:.5px;filter:saturate(1.2)}
+    .led.big{font-size:2rem;font-weight:900}
+    .led.mid{font-size:1.4rem;font-weight:800}
+    .led.meta{font-size:1rem;font-weight:700;opacity:.95}
+    .ledAccent{color:#ffb100;text-shadow:0 0 6px #ffb100,0 0 14px #ffb100}
+    .flicker{animation:flicker 2.8s infinite steps(1,end)}
+    @keyframes flicker{0%{opacity:.95}3%{opacity:.8}6%{opacity:1}7%{opacity:.88}10%{opacity:1}13%{opacity:.9}16%{opacity:1}22%{opacity:.85}100%{opacity:1}}
+
+    .marqueeFooter{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:12px 16px;border-top:1px solid #0f172a;background:#020617;color:#e2e8f0}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .toolbar select{padding:6px 10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l2.39 4.84L20 9.27l-4 3.9.94 5.48L12 16.9l-4.94 1.75L8 13.17l-4-3.9 5.61-1.43L12 3z" stroke="#1e40af" stroke-width="1.2" fill="#bfdbfe"/></svg>
+      <div>
+        <h1>칭찬 톡톡</h1>
+        <div class="sub">우리 반을 칭찬으로 물들이는 공간 ✨</div>
+      </div>
+    </div>
+
+    <!-- 칭찬보드 -->
+    <section id="compliments" class="tabPanel">
+      <div class="grid">
+        <div class="card">
+          <div class="content">
+            <h2>칭찬 남기기</h2>
+            <div class="row">
+              <div>
+                <label for="to">누구에게</label>
+                <input id="to" type="text" placeholder="예: 4번 민수 / 친한 친구 / 선생님" />
+              </div>
+              <div>
+                <label for="from">누가(선택)</label>
+                <input id="from" type="text" placeholder="예: 하은 / 비워두면 익명" />
+              </div>
+            </div>
+            <div style="margin-top:8px"></div>
+            <div>
+              <label for="msg">칭찬 내용</label>
+              <textarea id="msg" placeholder="예: 오늘 과학 시간에 실험 도구 정리를 도와줘서 고마웠어!"></textarea>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label for="tag">태그(선택)</label>
+                <select id="tag">
+                  <option value="">선택 없음</option>
+                  <option>친절</option>
+                  <option>협동</option>
+                  <option>책임감</option>
+                  <option>도움</option>
+                  <option>정리정돈</option>
+                </select>
+              </div>
+              <div style="flex:0 0 auto;display:flex;align-items:flex-end;gap:8px">
+                <button class="btn" onclick="addCompliment()">게시하기</button>
+                <button class="btn ghost" onclick="seedCompliments()" title="예시 데이터 추가">예시</button>
+              </div>
+            </div>
+            <div class="note" style="margin-top:12px">✅ 서로를 존중하는 말만 써요. 실명 대신 번호/별칭 사용 가능해요. 부적절한 글은 숨김 처리될 수 있어요.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="content">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <h2 style="margin:0">우리 반 칭찬</h2>
+              <div class="toolbar">
+                <button class="btn small" onclick="openMarquee()">전광판 모드</button>
+                <button class="btn small ghost" onclick="editPin()" title="교사용 PIN 설정">PIN 설정</button>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom:8px;margin-top:8px">
+              <div>
+                <label for="filter">검색</label>
+                <input id="filter" type="text" placeholder="이름/번호/내용 검색" oninput="renderCompliments()" />
+              </div>
+              <div>
+                <label for="sort">정렬</label>
+                <select id="sort" onchange="renderCompliments()">
+                  <option value="latest">최신순</option>
+                  <option value="likes">인기순(하트)</option>
+                </select>
+              </div>
+              <div style="flex:0 0 auto;display:flex;align-items:flex-end">
+                <button class="btn small ghost" onclick="clearCompliments()" title="로컬 저장 내용 초기화">초기화</button>
+              </div>
+            </div>
+            <div id="complimentList" class="list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 전광판(LED) 오버레이 -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="marquee" role="dialog" aria-label="전광판 모드">
+      <div class="marqueeHeader">
+        <h3>전광판 모드 — 우리 반 칭찬</h3>
+        <div class="toolbar" style="margin-left:auto">
+          <label class="muted">속도</label>
+          <select id="speed" onchange="changeSpeed()">
+            <option value="3000">빠르게 (3초)</option>
+            <option value="5000" selected>보통 (5초)</option>
+            <option value="8000">천천히 (8초)</option>
+          </select>
+          <label class="muted">정렬</label>
+          <select id="marqueeSort" onchange="reloadMarquee()">
+            <option value="latest">최신순</option>
+            <option value="likes">인기순(하트)</option>
+          </select>
+          <label class="muted">LED 색</label>
+          <select id="ledColor" onchange="changeLedColor()">
+            <option value="#00ffd1" selected>민트</option>
+            <option value="#eaff00">레몬</option>
+            <option value="#ff3df0">핑크</option>
+            <option value="#ffb100">주황</option>
+            <option value="#ff2d2d">빨강</option>
+            <option value="#46a3ff">하늘</option>
+          </select>
+          <button class="btn small ghost" onclick="toggleFullscreen()">전체화면</button>
+          <button class="btn small" onclick="closeMarquee()">닫기 Esc</button>
+        </div>
+      </div>
+      <div id="marqueeBody" class="marqueeBody"></div>
+      <div class="marqueeFooter">
+        <div class="toolbar">
+          <button class="btn small ghost" onclick="prevSlide()">◀ 이전</button>
+          <button id="playBtn" class="btn small" onclick="togglePlay()">⏸ 일시정지</button>
+          <button class="btn small ghost" onclick="nextSlide()">다음 ▶</button>
+        </div>
+        <div class="muted" id="counter">0 / 0</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Storage helpers =====
+    const LS_KEY_C = 'compliments_v1';
+    const LS_KEY_PIN = 'teacher_pin_v1';
+    function readCompliments(){ try{ return JSON.parse(localStorage.getItem(LS_KEY_C)||'[]'); }catch{return []} }
+    function writeCompliments(arr){ localStorage.setItem(LS_KEY_C, JSON.stringify(arr)); }
+    function getPin(){ return localStorage.getItem(LS_KEY_PIN) || '1234'; }
+    function setPin(newPin){ localStorage.setItem(LS_KEY_PIN, newPin); }
+    function requirePin(){ const input = window.prompt('관리자 PIN을 입력하세요 (기본 1234)'); return input!==null && input.trim()===getPin(); }
+
+    // ===== CRUD & UI =====
+    function addCompliment(){
+      const to = document.getElementById('to').value.trim();
+      const from = document.getElementById('from').value.trim();
+      const msg = document.getElementById('msg').value.trim();
+      const tag = document.getElementById('tag').value;
+      if(!to || !msg){ alert('"누구에게"와 "칭찬 내용"을 채워주세요!'); return; }
+      const arr = readCompliments();
+      arr.unshift({id:crypto.randomUUID(), to, from: from||'익명', msg, tag, likes:0, ts:Date.now(), hidden:false});
+      writeCompliments(arr); document.getElementById('msg').value=''; renderCompliments();
+    }
+
+    function likeCompliment(id){ const arr = readCompliments(); const it = arr.find(x=>x.id===id); if(!it) return; it.likes = (it.likes||0) + 1; writeCompliments(arr); renderCompliments(); }
+    function hideCompliment(id){
+      if(!requirePin()) { alert('PIN이 올바르지 않아요. (기본 1234)'); return; }
+      const arr = readCompliments();
+      const it = arr.find(x=>x.id===id); if(!it) return; it.hidden = true; writeCompliments(arr); renderCompliments();
+    }
+    function clearCompliments(){ if(confirm('로컬에 저장된 칭찬 글을 모두 지울까요?')){ localStorage.removeItem(LS_KEY_C); renderCompliments(); }}
+
+    function fmtTime(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` }
+    function escapeHtml(str){ return (str+"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+
+    // 교사용 PIN 설정
+    function editPin(){
+      const current = window.prompt('현재 PIN을 입력하세요 (기본 1234)');
+      if(current===null) return;
+      if((current||'').trim()!==getPin()) { alert('현재 PIN이 올바르지 않아요.'); return; }
+      const np = window.prompt('새 PIN을 입력하세요 (4~8자리 권장)');
+      if(np===null || !np.trim()) return alert('변경이 취소되었어요.');
+      const np2 = window.prompt('새 PIN을 한 번 더 입력하세요');
+      if(np2===null) return;
+      if(np.trim()!==np2.trim()) return alert('두 PIN이 일치하지 않아요.');
+      setPin(np.trim()); alert('PIN이 변경되었습니다.');
+    }
+
+    function getFilteredSortedItems(sortOverride){
+      const q = (document.getElementById('filter')?.value||'').toLowerCase();
+      const sort = sortOverride || (document.getElementById('sort')?.value||'latest');
+      let items = readCompliments().filter(x=>!x.hidden);
+      if(q){ items = items.filter(x => [x.to,x.from,x.msg,(x.tag||'')].join(' ').toLowerCase().includes(q)); }
+      if(sort==='likes'){ items.sort((a,b)=> (b.likes||0)-(a.likes||0) || b.ts-a.ts); } else { items.sort((a,b)=>b.ts-a.ts); }
+      return items;
+    }
+
+    function renderCompliments(){
+      const wrap = document.getElementById('complimentList');
+      const items = getFilteredSortedItems();
+      wrap.innerHTML = items.length ? '' : '<div class="muted">아직 칭찬이 없어요. 첫 칭찬의 주인공이 되어 주세요! 🌟</div>';
+      for(const it of items){
+        const card = document.createElement('div');
+        card.className='compliment';
+        card.innerHTML = `
+          <div class="meta">
+            <div><span class="chip">To</span> <span class="to">${escapeHtml(it.to)}</span> ${it.tag?`<span class="chip">#${escapeHtml(it.tag)}</span>`:''}</div>
+            <div class="stamp">${fmtTime(it.ts)}</div>
+          </div>
+          <div class="msg">${escapeHtml(it.msg)}</div>
+          <div class="row" style="align-items:center;">
+            <div class="muted">From <b>${escapeHtml(it.from)}</b></div>
+            <div class="actions" style="margin-left:auto">
+              <button class="like" onclick="likeCompliment('${it.id}')" title="응원하기">
+                <span>❤️</span><span>${it.likes||0}</span>
+              </button>
+              <button class="btn small ghost" onclick="hideCompliment('${it.id}')" title="부적절 신고/숨김">숨김</button>
+            </div>
+          </div>`;
+        card.querySelector('.like').type = 'button';
+        wrap.appendChild(card);
+      }
+    }
+
+    // ===== seedCompliments (예시 데이터 추가) =====
+    function seedCompliments(){
+      if(!confirm('예시 칭찬 4개를 추가할까요?')) return;
+      const arr = readCompliments();
+      const seeds = [
+        {to:'5번 소윤', from:'익명', msg:'체육 시간에 넘어졌을 때 먼저 다가와 괜찮냐고 물어봐 줘서 고마웠어!', tag:'친절'},
+        {to:'4번 민수', from:'하준', msg:'미술 시간 준비물을 잊은 나에게 색연필을 빌려줘서 고마워!', tag:'도움'},
+        {to:'모둠 3', from:'예나', msg:'과학 실험 후 정리정돈을 함께 해줘서 최고였어!', tag:'정리정돈'},
+        {to:'전체 친구들', from:'담임', msg:'아침 인사도 또렷하게 하고 서로 예의 바르게 대해 줘서 정말 자랑스러워요!', tag:'책임감'}
+      ];
+      seeds.reverse().forEach(s=>arr.unshift({id:crypto.randomUUID(), likes:Math.floor(Math.random()*4), ts:Date.now()-Math.floor(Math.random()*1e6), hidden:false, ...s}));
+      writeCompliments(arr); renderCompliments();
+    }
+
+    // ===== 전광판(자동 스크롤, LED 스타일) =====
+    const overlay = document.getElementById('overlay');
+    const marqueeBody = document.getElementById('marqueeBody');
+    const counter = document.getElementById('counter');
+    const playBtn = document.getElementById('playBtn');
+    let slides = []; let idx = 0; let timer = null; let interval = 5000;
+
+    function openMarquee(){
+      slides = getFilteredSortedItems(document.getElementById('marqueeSort').value);
+      if(!slides.length){ alert('표시할 칭찬이 없어요! 먼저 칭찬을 추가해 주세요.'); return; }
+      idx = 0; overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false');
+      buildSlide(); startAuto(); document.addEventListener('keydown', keyHandler);
+    }
+    function closeMarquee(){ stopAuto(); overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); document.removeEventListener('keydown', keyHandler); }
+
+    function keyHandler(e){ if(e.key==='Escape') return closeMarquee(); if(e.key==='ArrowRight') return nextSlide(); if(e.key==='ArrowLeft') return prevSlide(); if(e.key===' ') { e.preventDefault(); togglePlay(); } }
+
+    function buildSlide(){
+      const it = slides[idx]; if(!it) return;
+      marqueeBody.innerHTML = `
+        <div class="marqueeCard">
+          <div class="led big flicker">To ${escapeHtml(it.to)} ${it.tag?`<span class="chip">#${escapeHtml(it.tag)}</span>`:''}</div>
+          <div class="led mid" style="margin-top:8px">${escapeHtml(it.msg)}</div>
+          <div class="led meta" style="margin-top:14px;display:flex;gap:14px;align-items:center">
+            <div>From <b>${escapeHtml(it.from)}</b></div>
+            <div class="ledAccent">❤️ ${it.likes||0}</div>
+            <div>${fmtTime(it.ts)}</div>
+          </div>
+        </div>`;
+      counter.textContent = `${idx+1} / ${slides.length}`;
+    }
+
+    function nextSlide(){ idx = (idx+1) % slides.length; buildSlide(); }
+    function prevSlide(){ idx = (idx-1+slides.length) % slides.length; buildSlide(); }
+
+    function startAuto(){ stopAuto(); timer = setInterval(nextSlide, interval); if(playBtn) playBtn.textContent = '⏸ 일시정지'; }
+    function stopAuto(){ if(timer){ clearInterval(timer); timer=null; } if(playBtn) playBtn.textContent = '▶ 재생'; }
+    function togglePlay(){ if(timer){ stopAuto(); } else { startAuto(); } }
+
+    function changeSpeed(){ interval = parseInt(document.getElementById('speed').value,10)||5000; if(timer){ startAuto(); } }
+    function reloadMarquee(){ slides = getFilteredSortedItems(document.getElementById('marqueeSort').value); idx = 0; buildSlide(); }
+    function changeLedColor(){ const c = document.getElementById('ledColor').value; document.documentElement.style.setProperty('--led', c); }
+
+    async function toggleFullscreen(){ const el = document.querySelector('.marquee'); if(!document.fullscreenElement){ try{ await el.requestFullscreen(); }catch{} } else{ await document.exitFullscreen(); } }
+
+    // ===== Tests =====
+    function assert(cond, msg){ if(!cond) throw new Error(msg); }
+    window.runTests = function(){
+      const backup = readCompliments();
+      const backupPin = getPin();
+      try{
+        // Ensure a clean state
+        writeCompliments([]);
+
+        // Test 1: addCompliment should add one and render
+        document.getElementById('to').value = '1번 도현';
+        document.getElementById('from').value = '지우';
+        document.getElementById('msg').value = '독서시간에 책 나눠줘서 고마워!';
+        document.getElementById('tag').value = '도움';
+        addCompliment();
+        assert(readCompliments().length===1,'addCompliment가 항목을 추가하지 않음');
+        assert(document.getElementById('complimentList').children.length>=1,'addCompliment 후 렌더 실패');
+
+        // Test 2: seedCompliments adds more
+        const before = readCompliments().length;
+        const _confirm = window.confirm; window.confirm = ()=>true; seedCompliments(); window.confirm = _confirm;
+        const after = readCompliments().length;
+        assert(after>before,'seedCompliments가 항목을 추가하지 않음');
+
+        // Test 3: hide with wrong/correct PIN
+        setPin('9999');
+        const firstId = readCompliments()[0].id;
+        const _prompt = window.prompt; window.prompt = ()=> '0000'; // wrong PIN
+        hideCompliment(firstId);
+        window.prompt = _prompt;
+        assert(readCompliments().find(x=>x.id===firstId)?.hidden!==true,'잘못된 PIN인데 숨김 처리됨');
+        window.prompt = ()=> '9999';
+        hideCompliment(firstId);
+        window.prompt = _prompt;
+        assert(readCompliments().find(x=>x.id===firstId)?.hidden===true,'올바른 PIN인데 숨김 실패');
+
+        // Test 4: open/close marquee flow
+        // make sure at least one visible item exists
+        const anyVisible = readCompliments().some(x=>!x.hidden);
+        if(!anyVisible){
+          const arr = readCompliments(); arr.unshift({id:crypto.randomUUID(), to:'테스트', from:'시스템', msg:'가시성 테스트', tag:'테스트', likes:0, ts:Date.now(), hidden:false}); writeCompliments(arr);
+        }
+        renderCompliments();
+        openMarquee();
+        assert(document.getElementById('overlay').classList.contains('show'),'전광판 열기 실패');
+        closeMarquee();
+        assert(!document.getElementById('overlay').classList.contains('show'),'전광판 닫기 실패');
+
+        // Test 5: clearCompliments
+        clearCompliments();
+        assert(readCompliments().length===0,'clearCompliments 실패');
+
+        alert('✅ 모든 테스트 통과!');
+      }catch(e){ console.error(e); alert('❌ 테스트 실패: '+e.message); }
+      finally{
+        setPin(backupPin);
+        writeCompliments(backup); renderCompliments();
+      }
+    };
+
+    // 초기 렌더링
+    renderCompliments();
+  </script>
+</body>
+</html>
